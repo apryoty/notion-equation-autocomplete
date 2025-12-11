@@ -29,13 +29,35 @@ npm install
 ```
 
 3. Build the project:
+
+**For Chrome/Edge:**
+```bash
+npm run build:chrome
+```
+The extension will be in the `dist-chrome` folder.
+
+**For Firefox:**
+```bash
+npm run build:firefox
+```
+The extension will be in the `dist-firefox` folder.
+
+**For both browsers:**
 ```bash
 npm run build
 ```
 
 4. Load the extension in your browser:
-   - **Chrome/Edge**: Go to `chrome://extensions/`, enable Developer mode, and click "Load unpacked"
-   - **Firefox**: Go to `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on"
+   - **Chrome/Edge**: Go to `chrome://extensions/`, enable Developer mode, click "Load unpacked", and select the `dist-chrome` folder
+   - **Firefox**: Go to `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on", and select the `manifest.json` file in the `dist-firefox` folder
+
+## 🌐 Browser Compatibility
+
+- ✅ **Chrome** (v88+)
+- ✅ **Microsoft Edge** (v88+)
+- ✅ **Firefox** (v78+)
+- ✅ **Opera** (v74+)
+- ✅ **Brave**
 
 ## Usage
 
@@ -59,9 +81,6 @@ npm run dev
 
 # Build for production
 npm run build
-
-# Run tests
-npm test
 
 # Lint code
 npm run lint
