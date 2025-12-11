@@ -80,7 +80,11 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
+
+# Extension build directories (Chrome & Firefox)
+dist/
+dist-chrome/
+dist-firefox/
 
 # Gatsby files
 .cache/
@@ -93,7 +97,6 @@ dist
 
 # vuepress v2.x temp and cache directory
 .temp
-.cache
 
 # Sveltekit cache directory
 .svelte-kit/
@@ -137,3 +140,13 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+*.swp
+*.swo
+*~
