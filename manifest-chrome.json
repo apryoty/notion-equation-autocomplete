@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Notion Equation Autocomplete",
+  "version": "1.0.0",
+  "description": "Enhance your mathematical writing experience on Notion with autocompletion for LaTeX commands",
+  "permissions": [
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://*.notion.so/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.notion.so/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
