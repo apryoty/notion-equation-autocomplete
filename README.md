@@ -81,11 +81,6 @@ Contributions are welcome! Feel free to:
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
-
-- Thanks to the Notion community for inspiration
-- Based on KaTeX standards
-
 ## Contact
 
 Apryoty - [@apryoty](https://github.com/apryoty)
