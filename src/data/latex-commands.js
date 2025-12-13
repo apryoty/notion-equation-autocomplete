@@ -1019,3 +1019,34 @@ export const latexCommands = [
   { command: '\\zeta', description: 'Greek letter zeta', after: '' },
 ];
 
+// LaTeX environments that can only be used inside \begin{} ... \end{}
+// These will only autocomplete when user is typing inside \begin{...}
+export const latexEnvironments = [
+  { name: 'align', description: 'Aligned equations (numbered)' },
+  { name: 'align*', description: 'Aligned equations (unnumbered)' },
+  { name: 'aligned', description: 'Aligned equations (inline)' },
+  { name: 'alignat', description: 'Aligned at specific positions' },
+  { name: 'alignat*', description: 'Aligned at specific positions (unnumbered)' },
+  { name: 'array', description: 'Array of elements' },
+  { name: 'Bmatrix', description: 'Matrix with curly braces' },
+  { name: 'bmatrix', description: 'Matrix with square brackets' },
+  { name: 'cases', description: 'Cases for piecewise functions' },
+  { name: 'CD', description: 'Commutative diagram' },
+  { name: 'darray', description: 'Display array' },
+  { name: 'dcases', description: 'Display cases' },
+  { name: 'drcases', description: 'Display right cases' },
+  { name: 'equation', description: 'Numbered equation' },
+  { name: 'equation*', description: 'Unnumbered equation' },
+  { name: 'gather', description: 'Gathered equations' },
+  { name: 'gather*', description: 'Gathered equations (unnumbered)' },
+  { name: 'gathered', description: 'Gathered equations (inline)' },
+  { name: 'matrix', description: 'Matrix without delimiters' },
+  { name: 'pmatrix', description: 'Matrix with parentheses' },
+  { name: 'rcases', description: 'Right cases' },
+  { name: 'smallmatrix', description: 'Small matrix' },
+  { name: 'split', description: 'Split equation' },
+  { name: 'subarray', description: 'Sub array' },
+  { name: 'Vmatrix', description: 'Matrix with double vertical bars' },
+  { name: 'vmatrix', description: 'Matrix with vertical bars' },
+];
+
