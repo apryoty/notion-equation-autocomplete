@@ -1,7 +1,7 @@
 // Content script injected into Notion pages
 // Provides automatic autocompletion for LaTeX equations
 
-import { latexCommands, latexEnvironments } from './data/latex-commands.js';
+import { latexCommands, latexEnvironments } from './data/katex-commands.js';
 
 // Initialize the autocomplete functionality
 function init() {
