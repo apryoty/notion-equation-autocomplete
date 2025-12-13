@@ -3,6 +3,9 @@
 
 import { latexCommands, latexEnvironments } from './data/katex-commands.js';
 
+// Selector for Notion equation editors
+const EQUATION_EDITOR_SELECTOR = '.notion-overlay-container .content-editable-leaf-rtl[data-content-editable-leaf="true"]';
+
 // Initialize the autocomplete functionality
 function init() {
   
@@ -13,11 +16,11 @@ function init() {
         if (node.nodeType === 1) {
           // Check if the node itself matches or contains matching elements
           const matches = [];
-          if (node.matches && node.matches('.notion-overlay-container .content-editable-leaf-rtl[data-content-editable-leaf="true"]')) {
+          if (node.matches && node.matches(EQUATION_EDITOR_SELECTOR)) {
             matches.push(node);
           }
           if (node.querySelectorAll) {
-            const innerMatches = node.querySelectorAll('.notion-overlay-container .content-editable-leaf-rtl[data-content-editable-leaf="true"]');
+            const innerMatches = node.querySelectorAll(EQUATION_EDITOR_SELECTOR);
             matches.push(...innerMatches);
           }
           
@@ -40,14 +43,8 @@ function init() {
 
 function attachToExistingEditors() {
   // Find and attach to existing equation editors in the page
-  const selectors = [
-    '.notion-overlay-container .content-editable-leaf-rtl[data-content-editable-leaf="true"]',
-  ];
-  
-  selectors.forEach(selector => {
-    const editors = document.querySelectorAll(selector);
-    editors.forEach(attachToEquationEditor);
-  });
+  const editors = document.querySelectorAll(EQUATION_EDITOR_SELECTOR);
+  editors.forEach(attachToEquationEditor);
 }
 
 function attachToEquationEditor(element) {
