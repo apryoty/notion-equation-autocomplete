@@ -1,7 +1,7 @@
 // Content script injected into Notion pages
 // Provides automatic autocompletion for LaTeX equations
 
-import { latexCommands } from './data/latex-commands.js';
+import { latexCommands, latexEnvironments } from './data/latex-commands.js';
 
 // Initialize the autocomplete functionality
 function init() {
@@ -163,6 +163,7 @@ function findCorrespondingEnd(text, beginPos) {
 /**
  * Synchronizes \begin{} and \end{} arguments
  * For each \begin{}, finds its corresponding \end{} and updates the argument to match
+ * Also autocompletes environment names
  * @param {HTMLElement} element - The editor element
  * @returns {boolean} - True if any modification was made, false otherwise
  */
@@ -182,6 +183,44 @@ function syncBeginEndArguments(element) {
       pos: match.index,
       name: match[1]
     });
+  }
+  
+  // Check if cursor is in a \begin{} and autocomplete environment name
+  for (const begin of begins) {
+    const beginStart = begin.pos + 7; // Position after \begin{
+    const beginEnd = begin.pos + 7 + begin.name.length;
+    
+    if (cursorPos >= beginStart && cursorPos <= beginEnd && begin.name.length > 0) {
+      // Find matching environment names
+      const matches = latexEnvironments.filter(env => 
+        env.name.startsWith(begin.name) && env.name !== begin.name
+      );
+      
+      if (matches.length === 1) {
+        // Exactly one match, autocomplete
+        const completion = matches[0].name;
+        const beforeName = text.substring(0, beginStart);
+        const afterName = text.substring(beginEnd);
+        text = beforeName + completion + afterName;
+        offsetBeforeCursor += (completion.length - begin.name.length);
+        modified = true;
+        // Update the begin name for sync below
+        begin.name = completion;
+      } else if (matches.length > 1) {
+        // Multiple matches, find longest common prefix
+        const commonPrefix = findLongestCommonPrefix(matches.map(m => m.name));
+        if (commonPrefix.length > begin.name.length) {
+          const beforeName = text.substring(0, beginStart);
+          const afterName = text.substring(beginEnd);
+          text = beforeName + commonPrefix + afterName;
+          offsetBeforeCursor += (commonPrefix.length - begin.name.length);
+          modified = true;
+          // Update the begin name for sync below
+          begin.name = commonPrefix;
+        }
+      }
+      break; // Only autocomplete the one where cursor is
+    }
   }
   
   // Process each \begin{} and sync with its corresponding \end{}
