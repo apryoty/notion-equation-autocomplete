@@ -62,6 +62,8 @@ function attachToEquationEditor(element) {
 
   // Track if user is deleting (backspace/delete key)
   let isDeleting = false;
+  // Flag to prevent recursive calls when we modify the text
+  let isProcessing = false;
   
   element.addEventListener('keydown', (event) => {
     // Detect backspace or delete key
@@ -73,7 +75,12 @@ function attachToEquationEditor(element) {
   });
 
   // Add input listener for autocomplete
-  element.addEventListener('input', (event) => handleInput(event, isDeleting));
+  element.addEventListener('input', (event) => {
+    if (isProcessing) return;
+    isProcessing = true;
+    handleInput(event, isDeleting);
+    isProcessing = false;
+  });
 }
 
 function isEquationEditor(element) {
@@ -87,21 +94,192 @@ function isEquationEditor(element) {
   return isLeaf && hasLeafClass && isContentEditable;
 }
 
-function handleInput(event, isDeleting) {
-  // Don't autocomplete if user is deleting
-  if (isDeleting) {
-    return;
+/**
+ * Checks if the number of \begin{} matches the number of \end{}
+ * @param {string} text - The text to check
+ * @returns {boolean} - True if counts match, false otherwise
+ */
+function isBeginEndBalanced(text) {
+  const beginCount = (text.match(/\\begin\{/g) || []).length;
+  const endCount = (text.match(/\\end\{/g) || []).length;
+  return beginCount === endCount;
+}
+
+/**
+ * Finds the position of the \end{} tag corresponding to a given \begin{}
+ * @param {string} text - The complete text
+ * @param {number} beginPos - Position of the \begin{}
+ * @returns {object|null} - {pos, endPos, name} or null if not found
+ */
+function findCorrespondingEnd(text, beginPos) {
+  const beginRegex = /\\begin\{([^}]*)\}/g;
+  const endRegex = /\\end\{([^}]*)\}/g;
+  
+  const begins = [];
+  const ends = [];
+  
+  let match;
+  while ((match = beginRegex.exec(text)) !== null) {
+    begins.push({ name: match[1], pos: match.index, endPos: match.index + match[0].length });
+  }
+  while ((match = endRegex.exec(text)) !== null) {
+    ends.push({ name: match[1], pos: match.index, endPos: match.index + match[0].length });
   }
   
+  // Find our \begin{} tag
+  const ourBegin = begins.find(b => b.pos === beginPos);
+  if (!ourBegin) return null;
+  
+  // Create a sorted list of all tags after our \begin{}
+  const tagsAfter = [];
+  begins.forEach(b => {
+    if (b.pos > ourBegin.pos) {
+      tagsAfter.push({ type: 'begin', ...b });
+    }
+  });
+  ends.forEach(e => {
+    if (e.pos > ourBegin.pos) {
+      tagsAfter.push({ type: 'end', ...e });
+    }
+  });
+  tagsAfter.sort((a, b) => a.pos - b.pos);
+  
+  // Count nesting levels to find the corresponding \end{}
+  let level = 0;
+  for (const tag of tagsAfter) {
+    if (tag.type === 'begin') {
+      level++;
+    } else {
+      if (level === 0) {
+        return { pos: tag.pos, endPos: tag.endPos, name: tag.name };
+      }
+      level--;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Synchronizes \begin{} and \end{} arguments
+ * For each \begin{}, finds its corresponding \end{} and updates the argument to match
+ * @param {HTMLElement} element - The editor element
+ * @returns {boolean} - True if any modification was made, false otherwise
+ */
+function syncBeginEndArguments(element) {
+  let text = element.textContent;
+  const cursorPos = getCursorPosition(element);
+  let modified = false;
+  let offsetBeforeCursor = 0;
+  
+  // Find all \begin{} tags
+  const beginRegex = /\\begin\{([^}]*)\}/g;
+  const begins = [];
+  let match;
+  
+  while ((match = beginRegex.exec(text)) !== null) {
+    begins.push({
+      pos: match.index,
+      name: match[1]
+    });
+  }
+  
+  // Process each \begin{} and sync with its corresponding \end{}
+  for (const begin of begins) {
+    const correspondingEnd = findCorrespondingEnd(text, begin.pos);
+    
+    if (correspondingEnd && correspondingEnd.name !== begin.name) {
+      // Update \end{} argument to match \begin{}
+      const newEndTag = `\\end{${begin.name}}`;
+      const oldLength = correspondingEnd.endPos - correspondingEnd.pos;
+      const newLength = newEndTag.length;
+      
+      // Track offset if modification happens before cursor
+      if (correspondingEnd.pos < cursorPos) {
+        offsetBeforeCursor += (newLength - oldLength);
+      }
+      
+      text = text.substring(0, correspondingEnd.pos) + newEndTag + text.substring(correspondingEnd.endPos);
+      modified = true;
+    }
+  }
+  
+  if (modified) {
+    element.textContent = text;
+    // Adjust cursor position based on text changes before it
+    setCursorPosition(element, cursorPos + offsetBeforeCursor);
+  }
+  
+  return modified;
+}
+
+/**
+ * Adds \end{} after a \begin{} if counts are unbalanced
+ * @param {HTMLElement} element - The editor element
+ */
+function addEndIfNeeded(element) {
+  const text = element.textContent;
+  
+  if (!isBeginEndBalanced(text)) {
+    // Find the last \begin{} position
+    const beginMatches = [...text.matchAll(/\\begin\{([^}]*)\}/g)];
+    if (beginMatches.length === 0) return;
+    
+    const lastBegin = beginMatches[beginMatches.length - 1];
+    const beginName = lastBegin[1];
+    const insertPos = lastBegin.index + lastBegin[0].length;
+    
+    // Insert \n\n\end{} after the \begin{}
+    const newText = text.substring(0, insertPos) + '\n\n\\end{' + beginName + '}' + text.substring(insertPos);
+    element.textContent = newText;
+  }
+}
+
+/**
+ * Checks if the cursor is positioned inside a \begin{} argument (between braces)
+ * @param {string} text - The complete text
+ * @param {number} cursorPos - Current cursor position
+ * @returns {boolean} - True if cursor is inside \begin{...}, false otherwise
+ */
+function isCursorInBeginArgument(text, cursorPos) {
+  const beforeCursor = text.substring(0, cursorPos);
+  
+  // Find the last \begin{ before cursor
+  const lastBeginStart = beforeCursor.lastIndexOf('\\begin{');
+  if (lastBeginStart === -1) return false;
+  
+  // Find the closing } after that \begin{
+  const afterBegin = text.substring(lastBeginStart);
+  const closingBracePos = afterBegin.indexOf('}');
+  
+  if (closingBracePos === -1) {
+    // No closing brace found, cursor is inside incomplete \begin{
+    return true;
+  }
+  
+  // Check if cursor is between \begin{ and }
+  const absoluteClosingPos = lastBeginStart + closingBracePos;
+  return cursorPos > lastBeginStart + 7 && cursorPos <= absoluteClosingPos; // 7 = length of "\begin{"
+}
+
+function handleInput(event, isDeleting) {
   const text = event.target.textContent;
   const cursorPos = getCursorPosition(event.target);
   
-  // Check if user is typing a LaTeX command
-  const match = text.substring(0, cursorPos).match(/\\[\w]*$/);
+  // Autocomplete only if not deleting
+  if (!isDeleting) {
+    // Check if user is typing a LaTeX command
+    const match = text.substring(0, cursorPos).match(/\\[\w]*$/);
+    
+    if (match) {
+      const partial = match[0];
+      autocompleteIfUnique(event.target, partial, cursorPos);
+    }
+  }
   
-  if (match) {
-    const partial = match[0];
-    autocompleteIfUnique(event.target, partial, cursorPos);
+  // Synchronize \begin{} and \end{} arguments only if cursor is inside \begin{...}
+  if (isCursorInBeginArgument(text, cursorPos)) {
+    syncBeginEndArguments(event.target);
   }
 }
 
@@ -146,6 +324,11 @@ function autocompleteIfUnique(element, partial, cursorPos) {
     }
     
     setCursorPosition(element, newCursorPos);
+    
+    // Special handling for \begin: add \end{} if needed
+    if (completion === '\\begin') {
+      addEndIfNeeded(element);
+    }
   } 
   // If there are multiple matches, complete with the longest common prefix
   else if (matches.length > 1) {
