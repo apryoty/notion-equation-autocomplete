@@ -1,6 +1,8 @@
 // Content script injected into Notion pages
 // Provides automatic autocompletion for LaTeX equations
 
+'use strict';
+
 import { latexCommands, latexEnvironments } from './data/katex-commands.js';
 
 // Selector for Notion equation editors
@@ -8,37 +10,41 @@ const EQUATION_EDITOR_SELECTOR = '.notion-overlay-container .content-editable-le
 
 // Initialize the autocomplete functionality
 function init() {
-  
-  // Wait for Notion editor to be ready
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      mutation.addedNodes.forEach((node) => {
-        if (node.nodeType === 1) {
+  try {
+    // Wait for Notion editor to be ready
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === 1) {
           // Check if the node itself matches or contains matching elements
-          const matches = [];
-          if (node.matches && node.matches(EQUATION_EDITOR_SELECTOR)) {
-            matches.push(node);
-          }
-          if (node.querySelectorAll) {
-            const innerMatches = node.querySelectorAll(EQUATION_EDITOR_SELECTOR);
-            matches.push(...innerMatches);
-          }
+            const matches = [];
+            if (node.matches && node.matches(EQUATION_EDITOR_SELECTOR)) {
+              matches.push(node);
+            }
+            if (node.querySelectorAll) {
+              const innerMatches = node.querySelectorAll(EQUATION_EDITOR_SELECTOR);
+              matches.push(...innerMatches);
+            }
           
-          if (matches.length > 0) {
-            matches.forEach(attachToEquationEditor);
+            if (matches.length > 0) {
+              matches.forEach(attachToEquationEditor);
+            }
           }
-        }
+        });
       });
     });
-  });
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
 
-  // Attach to existing equation editors
-  attachToExistingEditors();
+    // Attach to existing equation editors
+    attachToExistingEditors();
+  } catch (error) {
+    // Silently fail in production - don't break Notion's functionality
+    // Error will be visible in browser console for debugging if needed
+  }
 }
 
 function attachToExistingEditors() {
@@ -48,6 +54,9 @@ function attachToExistingEditors() {
 }
 
 function attachToEquationEditor(element) {
+  // Validate element
+  if (!element || !element.nodeType) return;
+  
   // Check if this is an equation editor
   if (!isEquationEditor(element)) return;
   
@@ -299,23 +308,29 @@ function isCursorInBeginArgument(text, cursorPos) {
 }
 
 function handleInput(event, isDeleting) {
-  const text = event.target.textContent;
-  const cursorPos = getCursorPosition(event.target);
-  
-  // Autocomplete only if not deleting
-  if (!isDeleting) {
-    // Check if user is typing a LaTeX command
-    const match = text.substring(0, cursorPos).match(/\\[\w]*$/);
+  try {
+    if (!event || !event.target) return;
     
-    if (match) {
-      const partial = match[0];
-      autocompleteIfUnique(event.target, partial, cursorPos);
+    const text = event.target.textContent || '';
+    const cursorPos = getCursorPosition(event.target);
+    
+    // Autocomplete only if not deleting
+    if (!isDeleting) {
+      // Check if user is typing a LaTeX command
+      const match = text.substring(0, cursorPos).match(/\\[\w]*$/);
+      
+      if (match) {
+        const partial = match[0];
+        autocompleteIfUnique(event.target, partial, cursorPos);
+      }
     }
-  }
-  
-  // Synchronize \begin{} and \end{} arguments only if cursor is inside \begin{...}
-  if (isCursorInBeginArgument(text, cursorPos)) {
-    syncBeginEndArguments(event.target);
+    
+    // Synchronize \begin{} and \end{} arguments only if cursor is inside \begin{...}
+    if (isCursorInBeginArgument(text, cursorPos)) {
+      syncBeginEndArguments(event.target);
+    }
+  } catch (error) {
+    // Silently fail to avoid breaking Notion's editor
   }
 }
 

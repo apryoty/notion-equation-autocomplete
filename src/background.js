@@ -1,11 +1,13 @@
 // Background script for the extension
 // Handles extension lifecycle and messaging
 
+'use strict';
+
 // Uses webextension-polyfill for cross-browser compatibility (Chrome, Edge, Firefox)
 import browser from 'webextension-polyfill';
 
 browser.runtime.onInstalled.addListener(() => {
-  console.log('Notion Equation Autocomplete installed');
+  // Extension installed successfully
 });
 
 // Listen for messages from content scripts
